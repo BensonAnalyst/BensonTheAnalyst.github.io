@@ -1,0 +1,194 @@
+# # # # # # # # # # # # # # # # # # # # #
+# Install required packages
+# tidyverse for data import and wrangling
+# lubridate for date functions
+# ggplot for visualization
+# hms to set the datetime
+# # # # # # # # # # # # # # # # # # # # #
+
+#sets your working directory to simplify calls to data 
+setwd("/Users/cheehwapang/Downloads/GoogleDataAnalystInCoursera/Case_Study_Bike_Annual_Conversion/Processed_Data_Bike_Annual")
+
+install.packages("tidyverse")
+library(tidyverse)
+install.packages("lubridate")
+library(lubridate)
+install.packages("ggplot")
+install.packages("ggplot2")
+library(ggplot2)
+
+#=====================
+#STEP 1: COLLECT DATA
+#=====================
+jun_2022<- read_csv("2022Jun.csv")
+jul_2022<- read_csv("2022Jul.csv")
+aug_2022<- read_csv("2022Aug.csv")
+sep_2022<- read_csv("2022Sep.csv")
+oct_2022<- read_csv("2022Oct.csv")
+nov_2022<- read_csv("2022Nov.csv")
+dec_2022<- read_csv("2022Dec.csv")
+jan_2023<- read_csv("2023Jan.csv")
+feb_2023<- read_csv("2023Feb.csv")
+mar_2023<- read_csv("2023Mar.csv")
+apr_2023<- read_csv("2023Apr.csv")
+may_2023<- read_csv("2023May.csv")
+
+#====================================================
+#STEP 2: WRANGLE DATA AND COMBINE INTO A SINGLE FILE
+#====================================================
+
+colnames(may_2023)
+colnames(jun_2022)
+str(may_2023)
+str(jun_2022)
+
+#sets the correct date time in order to read and calculate ride length in later part
+install.packages("hms")
+may_2023 <- mutate(may_2023, ride_length = hms(ride_length))
+apr_2023 <- mutate(apr_2023, ride_length = hms(ride_length))
+mar_2023 <- mutate(mar_2023, ride_length = hms(ride_length))
+feb_2023 <- mutate(feb_2023, ride_length = hms(ride_length))
+jan_2023 <- mutate(jan_2023, ride_length = hms(ride_length))
+dec_2023 <- mutate(dec_2023, ride_length = hms(ride_length))
+dec_2022 <- mutate(dec_2022, ride_length = hms(ride_length))
+nov_2022 <- mutate(nov_2022, ride_length = hms(ride_length))
+oct_2022 <- mutate(oct_2022, ride_length = hms(ride_length))
+sep_2022 <- mutate(sep_2022, ride_length = hms(ride_length))
+aug_2022 <- mutate(aug_2022, ride_length = hms(ride_length))
+jul_2022 <- mutate(jul_2022, ride_length = hms(ride_length))
+jun_2022 <- mutate(jun_2022, ride_length = hms(ride_length))
+
+#stack individual month data frames into one big data frame
+all_trips <- bind_rows(jun_2022, jul_2022, aug_2022, sep_2022, oct_2022, nov_2022, dec_2022, jan_2023, feb_2023, mar_2023, apr_2023, may_2023)
+
+#remove lat, lng as this data not using at this moment
+all_trips <- all_trips %>%
+select(-c(start_lat, start_lng, end_lat, end_lng))
+
+#======================================================
+#STEP 3: CLEAN UP AND ADD DATA TO PREPARE FOR ANALYSIS
+#======================================================
+str(all_trips) #See list of columns and data types (numeric, character, etc) 
+colnames(all_trips) #List of column names 
+nrow(all_trips) #How many rows are in data frame? 
+dim(all_trips) #Dimensions of the data frame? 
+head(all_trips) #See the first 6 rows of data frame
+summary(all_trips) #Statistical summary of data. Mainly for numerics
+
+# There are a few problems we will need to fix:
+# (1) We will want to add a calculated field for ride_length since the data did not have the "tripduration" column. We will add "ride_length" to the  
+# entire dataframe for consistency.
+# (2) There are some rides where ride_length shows up as negative. We will want to delete these rides.
+
+
+all_trips$date <- as.Date(all_trips$started_at, format = "%d/%m/%y")
+all_trips$day <- format(as.Date(all_trips$date),"%d")
+all_trips$month <- format(as.Date(all_trips$date),"%m")
+all_trips$year <- format(as.Date(all_trips$date),"%Y")
+all_trips$day_of_weeks <- format(as.Date(all_trips$date), "%A")
+
+
+# set started_at and ended_at date time format in correct order before getting the ride_lengths
+all_trips$started_ats <- as.POSIXct(all_trips$started_at, format = "%d/%m/%y %H:%M")
+all_trips$ended_ats <- as.POSIXct(all_trips$ended_at, format = "%d/%m/%y %H:%M")
+all_trips$ride_lengths <- difftime(all_trips$ended_ats, all_trips$started_ats)
+is.factor(all_trips$ride_lengths)
+all_trips$ride_lengths <- as.numeric(as.character(all_trips$ride_lengths))
+str(all_trips)
+is.numeric(all_trips$ride_lengths)
+
+# check any missing data or negative value for ride_lengths before conduct analysis
+missing_values <- sum(is.na(all_trips$ride_lengths))
+negative_values <- sum(all_trips$ride_lengths < 0)
+cat("Number of missing values in ride_lengths:", missing_values, "\n")
+cat("Number of negative values in ride_lengths:", negative_values, "\n")
+missing_values <- sum(is.na(all_trips$start_station_name))
+cat("Number of missing values in ride_lengths:", missing_values, "\n")
+
+#=====================================
+STEP 4: CONDUCT DESCRIPTIVE ANALYSIS
+#=====================================
+
+mean(all_trips$ride_lengths)
+median(all_trips$ride_lengths)
+summary(all_trips)
+aggregate(all_trips$ride_lengths~all_trips$member_casual, FUN=mean)
+
+# Method 1: Create a function to calculate multiple summary statistics#
+summary_stats <- function(x) {#
+  c(mean = mean(x), median = median(x), max = max(x), min = min(x))#
+}#
+#
+# Method 2: Apply the summary_stats function using aggregate()#
+result <- aggregate(ride_length ~ member_casual, data = all_trips_v2, FUN = summary_stats)#
+result <- aggregate(ride_length ~ member_casual, data = all_trips_v2, FUN = summary_stats)
+result <- aggregate(ride_length ~ member_casual, data = all_trips, FUN = summary_stats)
+result <- aggregate(ride_lengths ~ member_casual, data = all_trips, FUN = summary_stats)
+print(result)
+
+#analyze ridership data by type and weekday
+all_trips$day_of_weeks <- ordered(all_trips$day_of_weeks, level=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+#average ride time by each day for members vs casual users
+
+aggregate(all_trips$ride_lengths ~ all_trips$member_casual + all_trips$day_of_weeks, FUN = mean)
+
+#analyze ridership data by type and weekday
+
+all_trips %>%
+  mutate(weekday = wday(started_ats, label = TRUE)) %>%
+  group_by(member_casual, weekday) %>%
+  summarise(number_of_rides = n(), average_duration = mean(ride_lengths)) %>%
+  arrange(member_casual, weekday)
+
+# x=weekday (Sunday-Saturday), y = number of rides
+all_trips %>%
+	mutate(weekday = wday(started_ats, label =TRUE)) %>%
+	group_by(member_casual, weekday) %>%
+	summarise(number_of_rides = n(), average_duration = mean(ride_lengths)) %>%
+	arrange(member_casual,weekday) %>%
+	ggplot(aes(x=weekday, y = number_of_rides, fill = member_casual)) +
+	geom_col(position = "dodge")
+
+# x=weekday (Sunday-Saturday), y = average duration
+all_trips %>% 
+  	mutate(weekday = wday(started_ats, label = TRUE)) %>% 
+  	group_by(member_casual, weekday) %>% 
+    summarise(number_of_rides = n(),average_duration = mean(ride_lengths)) %>% 
+  	arrange(member_casual, weekday)  %>% 
+    ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +	geom_col(position = "dodge")
+
+# filter out the docked_bike as this type of bike normally long hour and may affect the behaviour analysis
+all_trips %>%
+  filter(rideable_type != "docked_bike") %>%
+  mutate(weekday = wday(started_ats, label = TRUE)) %>%
+  group_by(member_casual, weekday, .groups = 'drop') %>%
+  summarise(number_of_rides = n(), average_duration = mean(ride_lengths)) %>%
+  arrange(member_casual, weekday) %>%
+  ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge")
+  
+all_trips %>%
+  filter(rideable_type != "docked_bike") %>%
+  mutate(weekday = wday(started_ats, label = TRUE)) %>%
+  group_by(member_casual, weekday, .groups = 'drop') %>%
+  summarise(number_of_rides = n(), average_duration = mean(ride_lengths)) %>%
+  arrange(member_casual, weekday) %>%
+  ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge")
+
+#=================================================
+# STEP 5: EXPORT SUMMARY FILE FOR FURTHER ANALYSIS
+#=================================================
+
+counts <- aggregate(all_trips$ride_lengths ~ all_trips$member_casual + all_trips$day_of_weeks, FUN = mean)
+write.csv(counts, file = '~/Desktop/avg_ride_length.csv')
+
+summary_table <- all_trips %>%#
+  filter(rideable_type != "docked_bike") %>%#
+  mutate(weekday = wday(started_ats, label = TRUE)) %>%#
+  group_by(member_casual, weekday, .groups = 'drop') %>%#
+  summarise(number_of_rides = n(),#
+            average_duration = mean(ride_lengths)) %>%#
+  arrange(member_casual, weekday)#
+summary_table <- as.data.frame(summary_table)
+write.csv(summary_table, file = '~/Desktop/number_of_rides.csv')
